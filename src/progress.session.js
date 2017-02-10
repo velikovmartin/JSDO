@@ -311,7 +311,9 @@ limitations under the License.
                                                 fn.fnName + "' requires an object as a parameter.");
                                         }
                                         var objParam;
-                                        if (object instanceof XMLHttpRequest) {
+                                        if (object instanceof XMLHttpRequest 
+                                                || (object.constructor 
+                                                    && object.constructor.name === "XMLHttpRequest")) {
                                             jsdo = object.jsdo;
                                             xhr = object;
                                             objParam = xhr.objParam;
