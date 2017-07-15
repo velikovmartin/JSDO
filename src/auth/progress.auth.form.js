@@ -1,5 +1,5 @@
 /* 
-progress.auth.form.js    Version: 4.4.0-1
+progress.auth.form.js    Version: 4.4.0-3
 
 Copyright (c) 2016-2017 Progress Software Corporation and/or its subsidiaries or affiliates.
  
@@ -77,8 +77,8 @@ limitations under the License.
         this._checkStringArg("login", userNameParam, 1, "userName");
         this._checkStringArg("login", passwordParam, 2, "password");
 
-        return this._loginProto("j_username=" + userNameParam +
-                                "&j_password=" + passwordParam + "&submit=Submit");
+        return this._loginProto("j_username=" + encodeURIComponent(userNameParam) +
+                                "&j_password=" + encodeURIComponent(passwordParam) + "&submit=Submit");
     };
     
     // login helper
@@ -92,7 +92,6 @@ limitations under the License.
         xhr.setRequestHeader("Cache-Control", "max-age=0");
         xhr.setRequestHeader("Pragma", "no-cache");
         xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-        xhr.setRequestHeader("Accept", "application/json");
 
         xhr.withCredentials = true;
 
@@ -172,15 +171,25 @@ limitations under the License.
     // AuthenticationProviderForm from, we would need to remember to change that here.
     // The use of the _super property will handle that automatically, plus it was more fun
     // to do it this way)
+    // TODO: This method uses a callback, primarily to avoid breaking tdriver tests. We should change 
+    // it to use promises
     fn = progress.data.AuthenticationProviderForm.prototype._openRequestAndAuthorize;
     progress.data.AuthenticationProviderForm.prototype._openRequestAndAuthorize =
-        function (xhr, verb, uri) {
+        function (xhr, verb, uri, async, callback) {
 
-            progress.data.AuthenticationProviderForm.prototype._openRequestAndAuthorize._super.apply(
-                this,
-                [xhr, verb, uri]
-            );
-            xhr.withCredentials = true;
+            function afterSuper(errorObject) {
+                xhr.withCredentials = true;
+                callback(errorObject);
+            }
+            
+            try {
+                progress.data.AuthenticationProviderForm.prototype._openRequestAndAuthorize._super.apply(
+                    this,
+                    [xhr, verb, uri, async, afterSuper]
+                );
+            } catch (e) {
+                callback(e);
+            }
         };
     progress.data.AuthenticationProviderForm.prototype._openRequestAndAuthorize._super = fn;
 
