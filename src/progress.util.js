@@ -1,5 +1,5 @@
 /* 
-progress.util.js    Version: 4.4.0-7
+progress.util.js    Version: 4.5.0-1
 
 Copyright (c) 2014-2017 Progress Software Corporation and/or its subsidiaries or affiliates.
 
@@ -20,6 +20,127 @@ limitations under the License.
  */
 /*global progress:true*/
 /*jslint nomen: true*/
+
+if (typeof XMLHttpRequest === "undefined") {
+    XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
+}
+
+var isNativeScript;
+if (typeof localStorage === "undefined"
+    || typeof sessionStorage === "undefined") {
+    try {
+        require('file-system/file-system-access');
+        isNativeScript = true;
+    } catch(e) {
+        isNativeScript = false;
+    }
+}
+if (isNativeScript) {
+    try {
+        if (typeof sessionStorage === "undefined") {
+            sessionStorage = require("nativescript-localstorage");
+        }
+        if (typeof localStorage === "undefined") {
+            localStorage = require("nativescript-localstorage");
+        }
+        // console.log("DEBUG: NS-ls was found");        
+    } catch(e) {
+        // console.log("DEBUG: nativescript-localstorage was not found");
+    }
+}
+
+var LocalStorage;
+if (typeof localStorage === "undefined") {
+    // console.log("DEBUG: node-localstorage");
+    try {
+        var module = require('node-localstorage');
+        LocalStorage = module.LocalStorage;
+        localStorage = new LocalStorage('./scratch1');
+    } catch(e) {
+        // Empty
+    }    
+}
+if (typeof sessionStorage === "undefined"
+    && typeof localStorage !== "undefined"
+    && (localStorage instanceof LocalStorage)) {
+    sessionStorage = new LocalStorage('./scratch2');    
+}
+
+// console.log("isNativeScript: " + isNativeScript);
+
+$ = function () {
+    "use strict";
+};
+$.Deferred = function () {
+    "use strict";
+    var deferred = {},
+        promise,
+        resolveArguments,
+        rejectArguments;
+
+    return {
+      promise: function () {
+          promise = new Promise(function (resolve, reject) {
+              deferred.resolve = resolve;
+              deferred.reject = reject;
+          });
+          promise._then = promise.then;
+          promise.done = function (callback) {
+              promise._then(function () {
+                  callback.apply(this, arguments[0]);
+              });
+              return promise;
+          };
+          promise.fail = function (callback) {
+              promise._then(undefined, function () {
+                  callback.apply(this, arguments[0]);
+              });
+              return promise;
+          };
+          /*
+          promise.then = function (callback) {
+              promise._then(function () {
+                  callback.apply(this, arguments[0]);
+              }, function () {
+                  callback.apply(this, arguments[0]);
+              });
+              return promise;
+          };
+          */
+          promise.then = function (callback) {
+            // console.log("DEBUG: then: ");
+            return promise._then(callback);
+          }
+          
+          if (resolveArguments || rejectArguments) {
+            setTimeout(function(){
+                if (resolveArguments) {
+                    deferred.resolve(resolveArguments);
+                } else if (rejectArguments) {
+                    deferred.reject(rejectArguments);
+                }
+            }, 500);
+          }
+          return promise;
+      },
+    resolve: function () {
+          // console.log("DEBUG: resolve: " + promise + " deferred: " + deferred);        
+        if (promise) {
+            deferred.resolve(arguments);
+        } else {
+            resolveArguments = arguments;
+        }
+    },
+      reject: function () {
+          if (promise) {
+            deferred.reject(arguments);
+          } else {
+            rejectArguments = arguments;
+          }
+      }
+  };
+};
+
 (function () {
 
      /* Define these if not defined yet - they may already be defined if
